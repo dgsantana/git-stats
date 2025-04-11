@@ -1,15 +1,39 @@
+use anyhow::Result;
 use clap::Parser;
 use git2::Repository;
-use users::update_user_stats;
 
-mod options;
-mod tui;
-mod users;
+use git_stats::{
+    tui,
+    users::{self, update_user_stats},
+};
 
-fn main() -> anyhow::Result<()> {
-    let options = options::Options::parse();
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+pub struct Args {
+    /// Path to the git repository
+    /// If not specified, the current directory will be used
+    #[arg(short, long, default_value = ".")]
+    pub repo: String,
+    /// Branch to analyze
+    /// If not specified, the current branch will be used
+    #[arg(short, long, default_value = "HEAD")]
+    pub branch: String,
+    /// Use TUI interface
+    #[arg(short, long)]
+    pub tui: bool,
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    if std::env::var("RUST_BACKTRACE").is_err() {
+        unsafe {
+            std::env::set_var("RUST_BACKTRACE", "1");
+        }
+    }
+
+    let options = Args::parse();
     // Open the git repository
-    let path = options.path;
+    let path = options.repo;
     let branch = options.branch;
 
     let repo = Repository::open(path)?;
