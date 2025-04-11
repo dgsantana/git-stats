@@ -1,5 +1,7 @@
 # git-stats
 
+This came as an idea from @arturleao. An easy way to get the stats of a git repository.
+
 A Rust command-line tool to analyze git repositories and generate detailed contributor statistics.
 
 > ⚠️ **Note:** This project is still a work in progress.

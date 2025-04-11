@@ -36,7 +36,6 @@ impl Eq for UserInfo {}
 
 impl std::hash::Hash for UserInfo {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.id.hash(state);
         self.name.hash(state);
         self.email.hash(state);
     }
@@ -97,7 +96,7 @@ pub fn update_user_stats(
     let progress = indicatif::ProgressBar::new_spinner();
     progress.set_message("Processing commits...");
     progress.set_style(
-        indicatif::ProgressStyle::with_template("{spinner} {msg} [{elapsed_precise}]")
+        indicatif::ProgressStyle::with_template("{spinner} {msg} commits {per_sec} [{elapsed_precise}]")
             .unwrap()
             .tick_chars("⠋⠙⠸⠼⠧⠇⠏"),
     );
@@ -109,12 +108,15 @@ pub fn update_user_stats(
         let author = commit.author();
 
         let user_email = author.email().unwrap_or_default();
-        let Some(user) = users.iter().find(|u| u.email == user_email) else {
+        let user_name = author.name().unwrap_or_default();
+        let Some(user) = users.iter().find(|u| u.email == user_email || u.name == user_name) else {
             continue;
         };
 
         let commit_date = utc_from_commit(&commit)?.date_naive();
-        let (added, removed) = get_lines_changed(repo, &commit)?;
+        // let (added, removed) = get_lines_changed(repo, &commit)?;
+        let added = 0;
+        let removed = 0;
 
         user_stats
             .entry(user.id)
