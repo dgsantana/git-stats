@@ -1,5 +1,4 @@
 pub mod app;
-pub mod event;
 pub mod ui;
 
 use std::io;
@@ -8,13 +7,12 @@ use std::time::Duration;
 use anyhow::Result;
 use app::App;
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{Terminal, prelude::CrosstermBackend};
 
-use self::event::{Event, EventHandler};
 use crate::users::UserInfo;
 
 pub fn run_tui(users: Vec<UserInfo>) -> Result<()> {
@@ -51,26 +49,32 @@ fn run_app<B: ratatui::backend::Backend>(
     mut app: App,
     tick_rate: Duration,
 ) -> Result<()> {
-    let events = EventHandler::new(tick_rate);
-
     loop {
         terminal.draw(|f| ui::render(f, &mut app))?;
-
-        match events.next()? {
-            Event::Input(key) => match key.code {
-                crossterm::event::KeyCode::Char('q') => return Ok(()),
-                crossterm::event::KeyCode::Down => app.next(),
-                crossterm::event::KeyCode::Up => app.previous(),
-                crossterm::event::KeyCode::Tab => app.toggle_focus(),
-                _ => {}
-            },
-            Event::Tick => {
-                app.on_tick();
-            }
-        }
-
+        event::poll(tick_rate)?;
+        handle_events(&mut app)?;
         if app.should_quit {
             return Ok(());
         }
     }
+}
+
+fn handle_events(app: &mut App) -> Result<()> {
+    let timeout = Duration::from_secs_f64(1.0 / 50.0);
+    if !event::poll(timeout)? {
+        return Ok(());
+    }
+
+    match event::read()? {
+        Event::Key(key) if key.kind == KeyEventKind::Press => match key.code {
+            KeyCode::Char('q') => return Ok(()),
+            KeyCode::Down => app.next(),
+            KeyCode::Up => app.previous(),
+            KeyCode::Tab => app.toggle_focus(),
+            KeyCode::Esc => app.should_quit = true,
+            _ => (),
+        },
+        _ => (),
+    }
+    Ok(())
 }
